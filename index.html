@@ -85,7 +85,7 @@
             box-shadow: 0 0 15px rgba(252, 211, 77, 0.5); /* Gelber Glow */
         }
         
-        /* Styling für Option-Gruppen Titel - WIRD JETZT NICHT MEHR GENERIERT */
+        /* Optionsgruppen-Titel (werden nicht gerendert, aber Stil ist vorhanden) */
         .option-group-title {
             color: #facc15; 
             font-weight: 700;
@@ -101,7 +101,7 @@
 <div class="w-full max-w-lg mx-auto">
     <header class="text-center mb-6">
         <h1 class="text-3xl sm:text-4xl font-bold text-yellow-400">MwSt-Rechner Personenbeförderung</h1>
-        <p class="text-gray-400 mt-2 text-sm sm:text-base">Ermittlung des korrekten Mehrwertsteuersatzes pro Fahrt.</p>
+        <p class="text-gray-400 mt-2 text-sm sm:text-base">Ermittlung des korrekten Mehrwertsteuersatzes pro Fahrt im Landkreis Harz.</p>
     </header>
 
     <!-- Haupt-Container -->
@@ -125,9 +125,9 @@
 
         <!-- SCHRITT 2: Transportart Auswahl (Dynamische Kacheln) -->
         <div id="transportConditionWrapper" class="hidden pt-6 border-t border-gray-700">
-             <label class="block text-sm font-medium text-gray-300 mb-3">2. Fahrtkondition</label>
+             <label class="block text-sm font-medium text-gray-300 mb-3">2. Fahrtkondition (Farblich nach Steuersatz sortiert)</label>
             <div id="transportConditionOptions" class="space-y-3 mb-6">
-                <!-- Dynamische Kacheln werden hier von JS eingefügt - Keine Zwischenüberschriften mehr -->
+                <!-- Dynamische Kacheln werden hier von JS eingefügt -->
             </div>
         </div>
 
@@ -141,7 +141,7 @@
 
         <!-- Rechtlicher Hinweis -->
         <div class="mt-4 p-4 bg-gray-700 border border-gray-600 rounded-lg">
-            <p class="text-xs font-semibold text-yellow-400 mb-1">Rechtliche Grundlage:</p>
+            <p class="text-xs font-semibold text-yellow-400 mb-1">Rechtliche Grundlage / Anmerkung:</p>
             <p id="legalNote" class="text-xs text-gray-400 italic">
                 Wählen Sie zuerst den Fahrzeugtyp und dann die passende Fahrtkondition aus der Liste.
             </p>
@@ -155,31 +155,31 @@
     const __firebase_config = '{}';
     const __initial_auth_token = '';
     
-    // Konfiguration der Optionen nach Fahrzeugtyp
-    // NOTE: Die optgroup-Objekte bleiben in der Datenstruktur, werden aber im DOM ignoriert
-    // Die farbliche Gliederung basiert auf dem getVatClass.
+    // Konfiguration der Optionen nach Fahrzeugtyp (mit den Regeln für Landkreis Harz)
+    
+    const HARZ_NOTE = '(Pflichtfahrgebiet Landkreis Harz)';
+
     const taxiOptions = [
-        // GRUPPE 1: 7% REDUZIERT (Nahverkehr)
+        // GRUPPE 1: 7% REDUZIERT (Nahverkehr) - Grüne Kacheln
         { optgroup: '7% REDUZIERT', vat: '7 %' }, 
-        { value: 'bar_nah', label: 'Barzahlung: Nahverkehr (Innerorts ODER ≤ 50 km)', note: '7 % (Ermäßigt). Gilt für Standard-Fahrten im Nahverkehr (§ 12 Abs. 2 Nr. 10a UStG).' },
-        { value: 'rechnung_nah', label: 'Rechnungsfahrt: Nahverkehr (Innerorts ODER ≤ 50 km)', note: '7 % (Ermäßigt). Gilt für Standard-Fahrten im Nahverkehr (§ 12 Abs. 2 Nr. 10a UStG).' },
+        { value: 'bar_nah', label: `Barzahlung: Innerhalb Pflichtfahrgebiet ${HARZ_NOTE}`, note: `7 % (Ermäßigt). Gilt für Standard-Fahrten Innerhalb des Pflichtfahrgebiets (§ 12 Abs. 2 Nr. 10a UStG).` },
+        { value: 'rechnung_nah', label: `Rechnungsfahrt: Innerhalb Pflichtfahrgebiet ${HARZ_NOTE}`, note: `7 % (Ermäßigt). Gilt für Standard-Fahrten Innerhalb des Pflichtfahrgebiets (§ 12 Abs. 2 Nr. 10a UStG).` },
         { value: 'kranken_schein', label: 'Transportschein: Krankenfahrt (sitzend, mit Transportschein)', note: '7 % (Ermäßigt). Gilt für Taxifahrten mit Transportschein im Nahverkehr.' },
         { value: 'schueler', label: 'Rechnungsfahrt (Schülerverkehr/Linienersatz)', note: '7 % (Ermäßigt). Wird dem Linienverkehr gleichgestellt.' },
-        { value: 'rollstuhl_standard', label: 'Rollstuhl-Taxi: Standardfahrt (z.B. privat, Shopping)', note: '7 % (Ermäßigt). Gilt als normale Personenbeförderung im Nahverkehr, unabhängig vom Fahrzeug (§ 12 Abs. 2 Nr. 10a UStG).' },
         
-        // GRUPPE 2: 19% REGELSATZ (Fernverkehr & Kurier)
-        { optgroup: '19% REGELSATZ', vat: '19 %' },
-        { value: 'bar_fern', label: 'Barzahlung: Fernverkehr (> 50 km) ODER Außerhalb Pflichtfahrgebiet', note: '19 % (Regelsatz). Gilt für Fahrten über 50 km (Fernverkehr) oder außerhalb des Pflichtfahrgebiets.' },
-        { value: 'rechnung_fern', label: 'Rechnungsfahrt: Fernverkehr (> 50 km) ODER Außerhalb Pflichtfahrgebiet', note: '19 % (Regelsatz). Gilt für Fahrten über 50 km (Fernverkehr) oder außerhalb des Pflichtfahrgebiets.' },
-        { value: 'kurier', label: 'Kurier-/Materialfahrt (KEINE Personenbeförderung)', note: '19 % (Regelsatz). Gilt immer, da keine Personenbeförderung.' },
-
-        // GRUPPE 3: 0% STEUERBEFREIT (Spezialfall)
+        // GRUPPE 2: 0% STEUERBEFREIT (Rollstuhl- & Spezialtransport) - Blaue Kacheln
         { optgroup: '0% STEUERBEFREIT', vat: '0 %' },
-        { value: 'rollstuhl_spezial', label: 'Rollstuhl-Taxi: Spezialtransport (z.B. qualifizierte Krankenfahrten, Liegend/Rollstuhl, steuerbefreit)', note: '0 % (Steuerbefreit). Gilt nur, wenn der Unternehmer als Sozialdienst anerkannt ist (§ 4 Nr. 17 UStG) UND die Leistung die Voraussetzungen erfüllt.' }
+        { value: 'rollstuhl_spezial', label: 'Rollstuhl-Taxi: Alle Fahrten (z.B. qualifizierte Krankenfahrten, Liegend/Rollstuhl)', note: '0 % (Steuerbefreit). Gilt nach Ihrer betriebsinternen Regelung für alle Rollstuhltransporte.' },
+
+        // GRUPPE 3: 19% REGELSATZ (Fernverkehr & Kurier) - Rote Kacheln
+        { optgroup: '19% REGELSATZ', vat: '19 %' },
+        { value: 'bar_fern', label: `Barzahlung: Außerhalb Pflichtfahrgebiet ${HARZ_NOTE}`, note: '19 % (Regelsatz). Gilt für Fahrten außerhalb des Pflichtfahrgebiets.' },
+        { value: 'rechnung_fern', label: `Rechnungsfahrt: Außerhalb Pflichtfahrgebiet ${HARZ_NOTE}`, note: '19 % (Regelsatz). Gilt für Fahrten außerhalb des Pflichtfahrgebiets.' },
+        { value: 'kurier', label: 'Kurier-/Materialfahrt (KEINE Personenbeförderung)', note: '19 % (Regelsatz). Gilt immer, da keine Personenbeförderung.' },
     ];
 
     const mietwagenOptions = [
-        // GRUPPE 1: 19% REGELSATZ (Standardfahrten Mietwagen)
+        // GRUPPE 1: 19% REGELSATZ (Standardfahrten Mietwagen) - Rote Kacheln
         { optgroup: '19% REGELSATZ', vat: '19 %' },
         { value: 'bar_standard', label: 'Barzahlung: Standard (Alle Strecken)', note: '19 % (Regelsatz). Mietwagen unterliegen grundsätzlich dem Regelsteuersatz.' },
         { value: 'rechnung_standard', label: 'Rechnungsfahrt: Standard (Alle Strecken)', note: '19 % (Regelsatz). Mietwagen unterliegen grundsätzlich dem Regelsteuersatz.' },
@@ -187,9 +187,11 @@
         
         // GRUPPE 2: 7% & 0% Ausnahmen
         { optgroup: '7% & 0% REDUZIERT/BEFREIT', vat: 'mixed' },
+        // 7% - Grüne Kacheln
         { value: 'kranken_schein', label: 'Transportschein: Krankenfahrt (sitzend, mit KV-Vertrag)', note: '7 % (Ermäßigt). Gilt nur bei Gleichstellung durch Sondervereinbarung mit der Krankenkasse.' },
         { value: 'schueler', label: 'Rechnungsfahrt (Schülerverkehr/Linienersatz)', note: '7 % (Ermäßigt). Wird dem Linienverkehr gleichgestellt.' },
-        { value: 'rollstuhl_spezial', label: 'Rollstuhl-Mietwagen: Spezialtransport (z.B. qualifizierte Krankenfahrten, Liegend/Rollstuhl, steuerbefreit)', note: '0 % (Steuerbefreit). Gilt nur, wenn der Unternehmer als Sozialdienst anerkannt ist (§ 4 Nr. 17 UStG) UND die Leistung die Voraussetzungen erfüllt.' }
+        // 0% - Blaue Kacheln
+        { value: 'rollstuhl_spezial', label: 'Rollstuhl-Mietwagen: Alle Fahrten (z.B. qualifizierte Krankenfahrten, Liegend/Rollstuhl)', note: '0 % (Steuerbefreit). Gilt nach Ihrer betriebsinternen Regelung für alle Rollstuhltransporte.' }
     ];
 
     /**
@@ -212,17 +214,26 @@
         const conditionWrapper = document.getElementById('transportConditionWrapper');
         const conditionOptionsContainer = document.getElementById('transportConditionOptions');
         
+        // Sorte nach VAT, um die farbliche Gliederung ohne Titel zu unterstützen: 0%, 7%, 19%
+        const sorter = (a, b) => {
+            if (a.vat === '0 %') return -1;
+            if (b.vat === '0 %') return 1;
+            if (a.vat === '7 %') return -1;
+            if (b.vat === '7 %') return 1;
+            return 0;
+        };
+
+        const options = (vehicle === 'taxi') ? taxiOptions.sort(sorter) : mietwagenOptions.sort(sorter);
+        
         conditionOptionsContainer.innerHTML = '';
         
         if (!vehicle) {
             conditionWrapper.classList.add('hidden');
             return;
         }
-
-        const options = (vehicle === 'taxi') ? taxiOptions : mietwagenOptions;
         
         options.forEach((opt, index) => {
-            // Nur die eigentlichen Kacheln rendern (optgroup-Objekte überspringen)
+            // Nur die eigentlichen Kacheln rendern, die optgroup-Titel (ohne value) ignorieren
             if (opt.value) { 
                 const container = document.createElement('div');
                 const uniqueId = `condition-${vehicle}-${index}`;
