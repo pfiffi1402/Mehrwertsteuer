@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MwSt-Rechner Personenbeförderung</title>
+    <!-- Lade Tailwind CSS für modernes, mobiles Design -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Verwende die Inter-Schriftart -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Übernahme der Stile für den Dark Mode und Touch-Bedienung */
+        body {
+            font-family: 'Inter', sans-serif;
+            touch-action: manipulation;
+        }
+        /* Styling für Inputs und Selects im Dark Mode */
+        .dark-input {
+            background-color: #374151; /* gray-700 */
+            border-color: #4b5563; /* gray-600 */
+            color: #ffffff;
+            box-shadow: none;
+        }
+        .dark-input:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px #facc15; /* yellow-400 Ring */
+            border-color: #facc15;
+        }
+        
+        /* Custom Styling für Radio Buttons (Fahrzeugtyp in Schritt 1) */
+        .radio-label-step1 {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            padding: 1rem 1rem;
+            border-radius: 0.75rem;
+            border: 2px solid #4b5563; 
+            transition: all 0.2s;
+            user-select: none;
+            background-color: #374151; 
+            text-align: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+        /* Zustand bei Auswahl von Step 1 */
+        .radio-label-step1:has(input:checked) {
+            background-color: #facc1530; 
+            border-color: #facc15; 
+            color: #facc15;
+        }
+
+        /* Custom Styling für Kacheln (Transportart in Schritt 2) */
+        .radio-label-step2 {
+            display: block; /* Volle Breite */
+            cursor: pointer;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            border: 2px solid; 
+            transition: all 0.2s;
+            user-select: none;
+            font-weight: 500;
+            line-height: 1.3;
+        }
+        
+        /* Spezifische Farben für Kacheln */
+        .vat-7 {
+            background-color: #064e3b; /* Emerald-900 */
+            border-color: #34d399; /* Emerald-400 */
+        }
+        .vat-19 {
+            background-color: #7f1d1d; /* Red-900 */
+            border-color: #f87171; /* Red-400 */
+        }
+        .vat-0 {
+            background-color: #3730a3; /* Indigo-900 */
+            border-color: #a5b4fc; /* Indigo-400 */
+        }
+
+        /* Zustand bei Auswahl von Step 2 */
+        .radio-label-step2:has(input:checked) {
+            transform: scale(1.02);
+            box-shadow: 0 0 15px rgba(252, 211, 77, 0.5); /* Gelber Glow */
+        }
+        
+        /* Styling für Option-Gruppen Titel - WIRD JETZT NICHT MEHR GENERIERT */
+        .option-group-title {
+            color: #facc15; 
+            font-weight: 700;
+            padding: 0.5rem 0;
+            margin-top: 1rem;
+            border-bottom: 1px solid #4b5563; 
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 text-white min-h-screen flex flex-col items-center p-4 sm:p-6">
+
+<div class="w-full max-w-lg mx-auto">
+    <header class="text-center mb-6">
+        <h1 class="text-3xl sm:text-4xl font-bold text-yellow-400">MwSt-Rechner Personenbeförderung</h1>
+        <p class="text-gray-400 mt-2 text-sm sm:text-base">Ermittlung des korrekten Mehrwertsteuersatzes pro Fahrt.</p>
+    </header>
+
+    <!-- Haupt-Container -->
+    <div class="bg-gray-800 p-6 rounded-2xl shadow-xl mb-8">
+        <h2 class="text-xl font-semibold mb-6 text-center text-yellow-400 border-b border-gray-700 pb-3">Fahrtkonditionen wählen</h2>
+
+        <!-- SCHRITT 1: Fahrzeugtyp Auswahl -->
+        <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-300 mb-3">1. Fahrzeugtyp</label>
+            <div class="flex space-x-4">
+                <div class="flex-1">
+                    <input type="radio" id="typeTaxi" name="vehicleType" value="taxi" class="hidden" onchange="updateTransportOptions(); calculateVAT();">
+                    <label for="typeTaxi" class="radio-label-step1">Taxi</label>
+                </div>
+                <div class="flex-1">
+                    <input type="radio" id="typeMietwagen" name="vehicleType" value="mietwagen" class="hidden" onchange="updateTransportOptions(); calculateVAT();">
+                    <label for="typeMietwagen" class="radio-label-step1">Mietwagen</label>
+                </div>
+            </div>
+        </div>
+
+        <!-- SCHRITT 2: Transportart Auswahl (Dynamische Kacheln) -->
+        <div id="transportConditionWrapper" class="hidden pt-6 border-t border-gray-700">
+             <label class="block text-sm font-medium text-gray-300 mb-3">2. Fahrtkondition</label>
+            <div id="transportConditionOptions" class="space-y-3 mb-6">
+                <!-- Dynamische Kacheln werden hier von JS eingefügt - Keine Zwischenüberschriften mehr -->
+            </div>
+        </div>
+
+        <!-- Ergebnisbereich (mt-10 sorgt für gute Trennung) -->
+        <div id="resultContainer" class="p-5 rounded-xl text-center shadow-lg transition-all duration-300 bg-gray-700 border-2 border-gray-600 mt-10">
+            <p class="text-sm text-gray-300 font-semibold mb-1">Gültiger Mehrwertsteuersatz</p>
+            <div id="resultVAT" class="text-6xl font-extrabold text-yellow-400">
+                —
+            </div>
+        </div>
+
+        <!-- Rechtlicher Hinweis -->
+        <div class="mt-4 p-4 bg-gray-700 border border-gray-600 rounded-lg">
+            <p class="text-xs font-semibold text-yellow-400 mb-1">Rechtliche Grundlage:</p>
+            <p id="legalNote" class="text-xs text-gray-400 italic">
+                Wählen Sie zuerst den Fahrzeugtyp und dann die passende Fahrtkondition aus der Liste.
+            </p>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Globale Variablen (MANDATORY)
+    const __app_id = '';
+    const __firebase_config = '{}';
+    const __initial_auth_token = '';
+    
+    // Konfiguration der Optionen nach Fahrzeugtyp
+    // NOTE: Die optgroup-Objekte bleiben in der Datenstruktur, werden aber im DOM ignoriert
+    // Die farbliche Gliederung basiert auf dem getVatClass.
+    const taxiOptions = [
+        // GRUPPE 1: 7% REDUZIERT (Nahverkehr)
+        { optgroup: '7% REDUZIERT', vat: '7 %' }, 
+        { value: 'bar_nah', label: 'Barzahlung: Nahverkehr (Innerorts ODER ≤ 50 km)', note: '7 % (Ermäßigt). Gilt für Standard-Fahrten im Nahverkehr (§ 12 Abs. 2 Nr. 10a UStG).' },
+        { value: 'rechnung_nah', label: 'Rechnungsfahrt: Nahverkehr (Innerorts ODER ≤ 50 km)', note: '7 % (Ermäßigt). Gilt für Standard-Fahrten im Nahverkehr (§ 12 Abs. 2 Nr. 10a UStG).' },
+        { value: 'kranken_schein', label: 'Transportschein: Krankenfahrt (sitzend, mit Transportschein)', note: '7 % (Ermäßigt). Gilt für Taxifahrten mit Transportschein im Nahverkehr.' },
+        { value: 'schueler', label: 'Rechnungsfahrt (Schülerverkehr/Linienersatz)', note: '7 % (Ermäßigt). Wird dem Linienverkehr gleichgestellt.' },
+        { value: 'rollstuhl_standard', label: 'Rollstuhl-Taxi: Standardfahrt (z.B. privat, Shopping)', note: '7 % (Ermäßigt). Gilt als normale Personenbeförderung im Nahverkehr, unabhängig vom Fahrzeug (§ 12 Abs. 2 Nr. 10a UStG).' },
+        
+        // GRUPPE 2: 19% REGELSATZ (Fernverkehr & Kurier)
+        { optgroup: '19% REGELSATZ', vat: '19 %' },
+        { value: 'bar_fern', label: 'Barzahlung: Fernverkehr (> 50 km) ODER Außerhalb Pflichtfahrgebiet', note: '19 % (Regelsatz). Gilt für Fahrten über 50 km (Fernverkehr) oder außerhalb des Pflichtfahrgebiets.' },
+        { value: 'rechnung_fern', label: 'Rechnungsfahrt: Fernverkehr (> 50 km) ODER Außerhalb Pflichtfahrgebiet', note: '19 % (Regelsatz). Gilt für Fahrten über 50 km (Fernverkehr) oder außerhalb des Pflichtfahrgebiets.' },
+        { value: 'kurier', label: 'Kurier-/Materialfahrt (KEINE Personenbeförderung)', note: '19 % (Regelsatz). Gilt immer, da keine Personenbeförderung.' },
+
+        // GRUPPE 3: 0% STEUERBEFREIT (Spezialfall)
+        { optgroup: '0% STEUERBEFREIT', vat: '0 %' },
+        { value: 'rollstuhl_spezial', label: 'Rollstuhl-Taxi: Spezialtransport (z.B. qualifizierte Krankenfahrten, Liegend/Rollstuhl, steuerbefreit)', note: '0 % (Steuerbefreit). Gilt nur, wenn der Unternehmer als Sozialdienst anerkannt ist (§ 4 Nr. 17 UStG) UND die Leistung die Voraussetzungen erfüllt.' }
+    ];
+
+    const mietwagenOptions = [
+        // GRUPPE 1: 19% REGELSATZ (Standardfahrten Mietwagen)
+        { optgroup: '19% REGELSATZ', vat: '19 %' },
+        { value: 'bar_standard', label: 'Barzahlung: Standard (Alle Strecken)', note: '19 % (Regelsatz). Mietwagen unterliegen grundsätzlich dem Regelsteuersatz.' },
+        { value: 'rechnung_standard', label: 'Rechnungsfahrt: Standard (Alle Strecken)', note: '19 % (Regelsatz). Mietwagen unterliegen grundsätzlich dem Regelsteuersatz.' },
+        { value: 'kurier', label: 'Kurier-/Materialfahrt (KEINE Personenbeförderung)', note: '19 % (Regelsatz). Gilt immer, da keine Personenbeförderung.' },
+        
+        // GRUPPE 2: 7% & 0% Ausnahmen
+        { optgroup: '7% & 0% REDUZIERT/BEFREIT', vat: 'mixed' },
+        { value: 'kranken_schein', label: 'Transportschein: Krankenfahrt (sitzend, mit KV-Vertrag)', note: '7 % (Ermäßigt). Gilt nur bei Gleichstellung durch Sondervereinbarung mit der Krankenkasse.' },
+        { value: 'schueler', label: 'Rechnungsfahrt (Schülerverkehr/Linienersatz)', note: '7 % (Ermäßigt). Wird dem Linienverkehr gleichgestellt.' },
+        { value: 'rollstuhl_spezial', label: 'Rollstuhl-Mietwagen: Spezialtransport (z.B. qualifizierte Krankenfahrten, Liegend/Rollstuhl, steuerbefreit)', note: '0 % (Steuerbefreit). Gilt nur, wenn der Unternehmer als Sozialdienst anerkannt ist (§ 4 Nr. 17 UStG) UND die Leistung die Voraussetzungen erfüllt.' }
+    ];
+
+    /**
+     * Ermittelt die entsprechende CSS-Klasse für die Kachelfarbe.
+     * @param {string} note - Der Rechtshinweis, aus dem der Satz extrahiert wird.
+     * @returns {string} Die CSS-Klasse (vat-7, vat-19, vat-0).
+     */
+    function getVatClass(note) {
+        if (note.includes('7 %')) return 'vat-7';
+        if (note.includes('19 %')) return 'vat-19';
+        if (note.includes('0 %')) return 'vat-0';
+        return 'bg-gray-700 border-gray-600'; // Fallback
+    }
+
+    /**
+     * Erzeugt die HTML-Kacheln für die Transportbedingungen.
+     */
+    function updateTransportOptions() {
+        const vehicle = document.querySelector('input[name="vehicleType"]:checked')?.value;
+        const conditionWrapper = document.getElementById('transportConditionWrapper');
+        const conditionOptionsContainer = document.getElementById('transportConditionOptions');
+        
+        conditionOptionsContainer.innerHTML = '';
+        
+        if (!vehicle) {
+            conditionWrapper.classList.add('hidden');
+            return;
+        }
+
+        const options = (vehicle === 'taxi') ? taxiOptions : mietwagenOptions;
+        
+        options.forEach((opt, index) => {
+            // Nur die eigentlichen Kacheln rendern (optgroup-Objekte überspringen)
+            if (opt.value) { 
+                const container = document.createElement('div');
+                const uniqueId = `condition-${vehicle}-${index}`;
+                const vatClass = getVatClass(opt.note);
+
+                container.innerHTML = `
+                    <input type="radio" id="${uniqueId}" name="transportCondition" value="${opt.value}" class="hidden" 
+                           data-vat-note="${opt.note}"
+                           onchange="calculateVAT()">
+                    <label for="${uniqueId}" class="radio-label-step2 ${vatClass}">
+                        ${opt.label}
+                    </label>
+                `;
+                conditionOptionsContainer.appendChild(container);
+            }
+        });
+        
+        conditionWrapper.classList.remove('hidden');
+    }
+
+    /**
+     * Berechnet den korrekten Mehrwertsteuersatz basierend auf der Kachel-Auswahl.
+     */
+    function calculateVAT() {
+        const selectedRadio = document.querySelector('input[name="transportCondition"]:checked');
+        const vehicle = document.querySelector('input[name="vehicleType"]:checked')?.value;
+        
+        const resultDisplay = document.getElementById('resultVAT');
+        const legalNoteDisplay = document.getElementById('legalNote');
+        const resultContainer = document.getElementById('resultContainer');
+
+        // Initialzustand oder nur Fahrzeugtyp gewählt
+        if (!vehicle || !selectedRadio) {
+            resultDisplay.textContent = '—';
+            legalNoteDisplay.textContent = 'Wählen Sie zuerst den Fahrzeugtyp und dann die passende Fahrtkondition aus der Liste.';
+            
+            // Setze auf neutrales Design zurück
+            resultContainer.className = 'p-5 rounded-xl text-center shadow-lg transition-all duration-300 bg-gray-700 border-2 border-gray-600 mt-10';
+            resultDisplay.className = 'text-6xl font-extrabold text-yellow-400';
+            return;
+        }
+
+        // Ergebnis aus dem Data-Attribut der Kachel holen
+        const note = selectedRadio.dataset.vatNote;
+        let vat = '19 %'; 
+
+        if (note.includes('7 %')) {
+            vat = '7 %';
+        } else if (note.includes('19 %')) {
+            vat = '19 %';
+        } else if (note.includes('0 %')) {
+            vat = '0 %';
+        }
+
+        resultDisplay.textContent = vat;
+        legalNoteDisplay.textContent = note;
+
+        // Farbliche Anpassung des Ergebnis-Containers (Dark Mode Konform)
+        let bgColor, borderColor, textColor;
+        
+        if (vat === '7 %') {
+            // Grün für 7 % (Ermäßigt)
+            bgColor = 'bg-green-900/50';
+            borderColor = 'border-green-500';
+            textColor = 'text-green-400';
+        } else if (vat === '19 %') {
+            // Rot für 19 % (Regelsatz)
+            bgColor = 'bg-red-900/50';
+            borderColor = 'border-red-500';
+            textColor = 'text-red-400';
+        } else if (vat === '0 %') {
+            // Indigo/Lila für 0 % (Steuerbefreit)
+            bgColor = 'bg-indigo-900/50';
+            borderColor = 'border-indigo-500';
+            textColor = 'text-indigo-400';
+        } else {
+            // Neutral
+            bgColor = 'bg-gray-700';
+            borderColor = 'border-yellow-500';
+            textColor = 'text-yellow-400';
+        }
+
+        resultContainer.className = `p-5 rounded-xl text-center shadow-lg transition-all duration-300 ${bgColor} border-2 ${borderColor} mt-10`; 
+        resultDisplay.className = `text-6xl font-extrabold ${textColor}`;
+    }
+
+    // Setze initial den Fokus
+    window.onload = function() {
+        // Füge Event Listener für die Initialauswahl hinzu, um bei Klick die Optionen zu aktualisieren
+        document.querySelectorAll('input[name="vehicleType"]').forEach(input => {
+            input.addEventListener('change', () => {
+                // Wenn der Fahrzeugtyp wechselt, setze die Transportbedingungen zurück und führe die Berechnung neu aus
+                document.querySelectorAll('input[name="transportCondition"]').forEach(cond => cond.checked = false);
+                updateTransportOptions();
+                calculateVAT(); // Führt die Initialanzeige des Ergebnisbereichs aus
+            });
+        });
+        
+        // Führe eine initiale Berechnung aus, falls bereits etwas ausgewählt ist
+        calculateVAT();
+    };
+</script>
+
+</body>
+</html>
+
